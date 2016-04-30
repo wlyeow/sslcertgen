@@ -1,0 +1,5 @@
+*.pem
+*.jks
+*.srl
+*.crl
+*.p12
