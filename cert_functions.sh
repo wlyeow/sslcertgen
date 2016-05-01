@@ -35,16 +35,16 @@ function create_signed_cert() {
 		<( openssl rsa -in "${4}_key.pem" -passin "pass:${5}" -pubout 2> /dev/null ) \
 		<( openssl x509 -in "${4}_crt.pem" -noout -pubkey ) 2> /dev/null; then
 		echo "CA key doesn't match cert: ${4}" >&2
-		return
+		return 1
 	fi
 
-	create_cert_pair "${1}" "${2}" "${3}"
+	create_cert_pair "${1}" "${2}" "${3}" &&
 	sign_cert "${1}" "${4}" "${6}" "${5}" "${@:7}"
 }
 
 function chain_PEM_to_JKS() {
 	# PEMtoJKS <pem> <pass> <jks> <jks-pass> [chain pems ...]
-	openssl pkcs12 -export -in "${1}_crt.pem" -inkey "${1}_key.pem" -passin "pass:${2}" -out "${1}.p12" -passout "pass:${2}" -name "${1}" -chain -CAfile <( for f in "${@:3}"; do echo "${f}_crt.pem"; done | xargs cat )
+	openssl pkcs12 -export -in "${1}_crt.pem" -inkey "${1}_key.pem" -passin "pass:${2}" -out "${1}.p12" -passout "pass:${2}" -name "${1}" -chain -CAfile <( for f in "${@:3}"; do echo "${f}_crt.pem"; done | xargs cat ) &&
 	keytool -importkeystore -srckeystore "${1}.p12" -srcstoretype PKCS12 -srcstorepass "${2}" -destkeystore "${3}.jks" -deststoretype JKS -deststorepass "${4}" -noprompt
 }
 
