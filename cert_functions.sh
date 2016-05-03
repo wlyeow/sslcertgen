@@ -44,11 +44,15 @@ function create_signed_cert() {
 
 function chain_PEM_to_JKS() {
 	# PEMtoJKS <pem> <pass> <jks> <jks-pass> [chain pems ...]
-	openssl pkcs12 -export -in "${1}_crt.pem" -inkey "${1}_key.pem" -passin "pass:${2}" -out "${1}.p12" -passout "pass:${2}" -name "${1}" -chain -CAfile <( for f in "${@:3}"; do echo "${f}_crt.pem"; done | xargs cat ) &&
+	# NOTE: keypass = storepass
+	openssl pkcs12 -export -in "${1}_crt.pem" -inkey "${1}_key.pem" -passin "pass:${2}" -out "${1}.p12" -passout "pass:${2}" -name "${1}" -chain -CAfile <( for f in "${@:5}"; do echo "${f}_crt.pem"; done | xargs cat ) &&
 	keytool -importkeystore -srckeystore "${1}.p12" -srcstoretype PKCS12 -srcstorepass "${2}" -destkeystore "${3}.jks" -deststoretype JKS -deststorepass "${4}" -noprompt
 }
 
 function add_PEM_to_JKS() {
 	# add_pem_to_jks <pem> <jks> <jks-pass> [alias]
+	# NOTE: keypass = storepass
+	# default overwrite
+	keytool -delete -alias "${4:-$1}" -keystore "${2}.jks" -storepass "${3}" -noprompt > /dev/null 2>&1
 	keytool -import -trustcacerts -file "${1}_crt.pem" -alias "${4:-$1}" -keystore "${2}.jks" -storepass "${3}" -noprompt
 }
