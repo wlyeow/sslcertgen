@@ -1,5 +1,5 @@
-HASH=sha256
-ENC=aes256
+HASH=sha1
+ENC=des3
 BITS=4096
 
 function create_cert_pair() {
@@ -53,6 +53,7 @@ function add_PEM_to_JKS() {
 	# add_pem_to_jks <pem> <jks> <jks-pass> [alias]
 	# NOTE: keypass = storepass
 	# default overwrite
-	keytool -delete -alias "${4:-$1}" -keystore "${2}.jks" -storepass "${3}" -noprompt > /dev/null 2>&1
-	keytool -import -trustcacerts -file "${1}_crt.pem" -alias "${4:-$1}" -keystore "${2}.jks" -storepass "${3}" -noprompt
+	local alias="$(basename "${4:-$1}")"
+	keytool -delete -alias "${alias}" -keystore "${2}.jks" -storepass "${3}" -noprompt > /dev/null 2>&1
+	keytool -import -trustcacerts -file "${1}_crt.pem" -alias "${alias}"  -keystore "${2}.jks" -storepass "${3}" -noprompt
 }
