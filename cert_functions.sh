@@ -1,17 +1,34 @@
-HASH=sha1
-ENC=des3
-BITS=4096
+: ${HASH:="sha256"}
+: ${ENC:="aes128"}
+: ${BITS:="4096"}
 
-function create_cert_pair() {
-	# create_cert_pair <name> <pass> <CN> [days - for self-signed only]
-	[ -z "${3}" ] && return 1
-	openssl genrsa -${ENC} -passout "pass:${2}" -out "${1}_key.pem" ${BITS} &&
-	if [ -z "${4}" ]; then
-		# csr
-		openssl req -new -${HASH} -key "${1}_key.pem" -passin "pass:${2}" -out "${1}_csr.pem" -subj "${3}"
+function _create_cert_pair() {
+	# create_cert_pair <filename> <CN> [password] [days - for self-signed only]
+
+	[ -z "${2}" ] && return 1
+
+	local CSR_F="${1}_csr.pem"
+	local CRT_F="${1}_crt.pem"
+	local KEY_F="${1}_key.pem"
+	local CNAME="${2}"
+	local PASSW="${3}"
+	local RDAYS="${4}" # csr if NULL; else self-signed
+	
+	if [ -z "${PASSW}" ]; then
+		openssl genrsa -out "${KEY_F}" ${BITS}
 	else
-		# self-signed
-		openssl req -new -x509 -days "${4}" -${HASH} -key "${1}_key.pem" -passin "pass:${2}" -out "${1}_crt.pem" -subj "${3}"
+		openssl genrsa -${ENC} -passout "pass:${PASSW}" -out "${KEY_F}" ${BITS}
+	fi
+
+	if [ -z "${RDAYS}" ]; then
+		openssl req -new -${HASH} -key "${KEY_F}" -passin "pass:${PASSW}" -out "${CSR_F}" -subj "${CNAME}"
+	else
+		openssl req -new -x509 -days "${RDAYS}" -${HASH} -key "${KEY_F}" -passin "pass:${PASSW}" -out "${CRT_F}" -subj "${CNAME}"
+	fi
+
+	if [ $? -ne 0 ]; then
+		echo Failed. >&2
+		rm -f "${CSR_F}" "${CRT_F}" "${KEY_F}" > /dev/null
 	fi
 }
 
