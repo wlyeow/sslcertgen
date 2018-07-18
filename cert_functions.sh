@@ -2,8 +2,17 @@
 : ${ENC:="aes128"}
 : ${BITS:="4096"}
 
+function _key_set_password() {
+	# _key_set_password <filename> 
+
+	local KEY_F="${1}_key.pem"
+	local PASSW="${2}"
+
+	openssl rsa 
+}
+
 function _create_cert_pair() {
-	# create_cert_pair <filename> <CN> [password] [days - for self-signed only]
+	# _create_cert_pair <filename> <CN> [password] [days - for self-signed only]
 
 	[ -z "${2}" ] && return 1
 
@@ -13,17 +22,22 @@ function _create_cert_pair() {
 	local CNAME="${2}"
 	local PASSW="${3}"
 	local RDAYS="${4}" # csr if NULL; else self-signed
-	
-	if [ -z "${PASSW}" ]; then
-		openssl genrsa -out "${KEY_F}" ${BITS}
+
+	local SELF_SIGNED
+	local OUT
+	if [ -n "${RDAYS}" ] && [ "${RDAYS}" -gt 0 ]; then
+		SELF_SIGNED="-x509 -days ${RDAYS}"
+		OUT="${CRT_F}"
 	else
-		openssl genrsa -${ENC} -passout "pass:${PASSW}" -out "${KEY_F}" ${BITS}
+		OUT="${CRT_F}"
 	fi
 
-	if [ -z "${RDAYS}" ]; then
-		openssl req -new -${HASH} -key "${KEY_F}" -passin "pass:${PASSW}" -out "${CSR_F}" -subj "${CNAME}"
+	if [ -z "${PASSW}" ]; then
+		openssl genrsa -out "${KEY_F}" ${BITS}
+		openssl req -new ${SELF_SIGNED} -${HASH} -subj "${CNAME}" -key "${KEY_F}" > "${OUT}"
 	else
-		openssl req -new -x509 -days "${RDAYS}" -${HASH} -key "${KEY_F}" -passin "pass:${PASSW}" -out "${CRT_F}" -subj "${CNAME}"
+		openssl genrsa -out "${KEY_F}" ${BITS} -${ENC} -passout "pass:${PASSW}"
+		openssl req -new ${SELF_SIGNED} -${HASH} -subj "${CNAME}" -key "${KEY_F}" -passin "pass:${PASSW}" > "${OUT}"
 	fi
 
 	if [ $? -ne 0 ]; then
